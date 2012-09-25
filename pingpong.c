@@ -60,6 +60,7 @@ struct socks5_socket_t {
 char remote[INET6_ADDRSTRLEN];
 int loglevel;
 char * logfile;
+char * portnumber;
 
 inline void logit(FILE * fd, char * str, ...) {
   FILE * file;
@@ -162,7 +163,7 @@ void remove_and_close(struct node_t * rem) {
 }
 
 
-int socket_bind_list() {
+int socket_bind_list(char * port) {
   int fdsock;
   struct addrinfo hints, servinfo, *pservinfo, *piterator;
   int retval, i = 0, yes = 1;
@@ -173,7 +174,7 @@ int socket_bind_list() {
 
   pservinfo = &servinfo;
 
-  if((retval = getaddrinfo(NULL, PORT, &hints, &pservinfo)) != 0)
+  if((retval = getaddrinfo(NULL, port, &hints, &pservinfo)) != 0)
   {
     logit(stderr, "ERROR: getaddrinfo: %s\n", gai_strerror(retval));
     return retval;
@@ -231,7 +232,7 @@ int socket_bind_list() {
   return fdsock;
 }
  
-int pong(){
+int pong(char * port){
   int fdsock;
   int retval;
 
@@ -243,7 +244,7 @@ int pong(){
 
   sin_size = sizeof client_addr;
 
-  fdsock = socket_bind_list();
+  fdsock = socket_bind_list(port);
   
   node = (struct node_t *)malloc(sizeof(struct node_t));
   node->next = NULL;
@@ -564,8 +565,9 @@ inline void usage() {
          " and redistribute it.\n");
   printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
 
-  printf("Syntax: pingpong [-s | -c [destination address] [destination port]"
-         " [SOCKS address] [SOCKS port]]\n\n");
+  printf("Syntax: pingpong -s [-p serverport] |\n");
+  printf("                 -c destinationaddress destinationport"
+                          " SOCKSaddress SOCKSport\n\n");
   printf("Type: \n");
   printf("  -s: Run as server\n");
   printf("  -c: Run as client\n\n");
@@ -575,21 +577,44 @@ inline void usage() {
   printf("destination port:\n  Port number that server is listening on\n\n");
   printf("SOCKS address:\n  IPv4 or IPv6 Address of SOCKS 5 server\n\n");
   printf("SOCKS port:\n  Port number that SOCKS 5 server is listening on\n\n\n");
-  return;
+
+  printf("Options:\n");
+  printf("  -p  server port number\n");
+  exit(0);
 }
 
 #define TYPE_OPTION_SIZE 2
+#define PORT_SIZE 5
 
 int main(int argc, char * argv[]) {
   char * type, * hostaddr, * hostport, * socksaddr, * socksport;
+  char * port;
+  int portsize;
   loglevel =  0;
   if(argc > 1)
   {
     type = argv[1];
     if(!strncmp(type, "-s", TYPE_OPTION_SIZE))
     {
-      logit(stdout, "Starting pong server on port %s\n", PORT);
-      pong();
+      if(argc > 2)
+      {
+        if(!strncmp(argv[2], "-p", TYPE_OPTION_SIZE) && argc > 3)
+	{
+          port = argv[3];
+	} else
+	{
+	  usage();
+	}
+      } else
+      {
+        port = PORT;
+      }
+      portsize = strlen(port);
+      portnumber = (char *)malloc(portsize * sizeof(char));
+      strncpy(portnumber, port, portsize);
+
+      logit(stdout, "Starting pong server on port %s\n", port);
+      pong(port);
     } else if(argc < 7)
     {
       if(!strncmp(type, "-c", TYPE_OPTION_SIZE))

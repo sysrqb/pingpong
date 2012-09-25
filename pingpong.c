@@ -578,23 +578,45 @@ inline void usage() {
   return;
 }
 
+#define TYPE_OPTION_SIZE 2
+
 int main(int argc, char * argv[]) {
+  char * type, * hostaddr, * hostport, * socksaddr, * socksport;
   loglevel =  0;
-  if(argc > 1) {
-    if(!strncmp(argv[1], "-s", 2)) {
-      logit(stdout, "Starting pong server\n");
+  if(argc > 1)
+  {
+    type = argv[1];
+    if(!strncmp(type, "-s", TYPE_OPTION_SIZE))
+    {
+      logit(stdout, "Starting pong server on port %s\n", PORT);
       pong();
-    } else if(argc > 1 && argc < 7) {
-      if(!strncmp(argv[1], "-c", 2)) {
-        logit(stdout, "Starting ping client to %s:%s via %s:%s\n",
-	      argv[2], argv[3], argv[4], argv[5]);
+    } else if(argc < 7)
+    {
+      if(!strncmp(type, "-c", TYPE_OPTION_SIZE))
+      {
         if(argc == 6)
-	  ping(argv[2], argv[3], argv[4], argv[5]);
-	else
-	  ping("", "7464", "127.0.0.1", "9100");
+	{
+          hostaddr = argv[2];
+	  hostport = argv[3];
+	  socksaddr = argv[4];
+	  socksport = argv[5];
+          logit(stdout, "Starting ping client to %s:%s via %s:%s\n",
+	        hostaddr, hostport, socksaddr, socksport);
+	  ping(hostaddr, hostport, socksaddr, socksport);
+	} else
+	{
+          /* Fallback value; let's keep everything local for now */
+          logit(stdout, "Starting ping client with a local connection to"
+	                " 127.0.0.1:7464 via 127.0.0.1:9100\n");
+	  ping("127.0.0.1", "7464", "127.0.0.1", "9100");
+	}
       }
+    } else
+    {
+      usage();
     }
-  } else {
+  } else
+  {
     usage();
   }
   return 0;

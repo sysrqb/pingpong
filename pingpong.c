@@ -557,6 +557,27 @@ int ping(char * hostaddr, char * port, char * socksaddr, char * socksport){
   return 0;
 }
 
+inline void usage() {
+  printf("License GPLv3+: GNU GPL version 3 or later"
+         " <http://gnu.org/licenses/gpl.html>\n");
+  printf("This is free software: you are free to change"
+         " and redistribute it.\n");
+  printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
+
+  printf("Syntax: pingpong [-s | -c [destination address] [destination port]"
+         " [SOCKS address] [SOCKS port]]\n\n");
+  printf("Type: \n");
+  printf("  -s: Run as server\n");
+  printf("  -c: Run as client\n\n");
+
+  printf("destination address:\n  IPv4 Addr | Fully-Qualified Domain"
+         " Name | IPv6 Addr\n\n");
+  printf("destination port:\n  Port number that server is listening on\n\n");
+  printf("SOCKS address:\n  IPv4 or IPv6 Address of SOCKS 5 server\n\n");
+  printf("SOCKS port:\n  Port number that SOCKS 5 server is listening on\n\n\n");
+  return;
+}
+
 int main(int argc, char * argv[]) {
   loglevel =  0;
   if(argc > 1) {
@@ -573,6 +594,8 @@ int main(int argc, char * argv[]) {
 	  ping("", "7464", "127.0.0.1", "9100");
       }
     }
+  } else {
+    usage();
   }
   return 0;
 }

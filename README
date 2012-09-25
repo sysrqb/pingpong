@@ -1,0 +1,38 @@
+pingpong: Simple echo request/reply client/server that passes requests via
+          SOCKS 5 proxy. The intended use is via Tor where the server is
+	  a Hidden Service, but there exist numerous alternative use cases
+
+Note: This is still under heavy development.
+
+
+Use Case:
+  Similar purpose to Tor Weather, but can be distributed across a diverse
+  environment and maintain anonymity.
+  
+Personal Reason:
+  The reason I decided to write this is because I have a laptop that is an
+  OR however it's wireless connection is not stable. By implementing this
+  it will allow me to have an automated response to the network becoming
+  unavailable.
+
+License:
+  I am releasing this code under the terms of AGPL due to the server
+  portion.
+
+PingPong
+Copyright (C) 2012  Matthew Finkel <Matthew.Finkel@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+The full license text is included in COPYING/COPYING

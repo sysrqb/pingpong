@@ -762,14 +762,8 @@ int main(int argc, char * argv[]) {
               strncpy(serversock->serveraddr, hostaddr, ATYP_IPV4_SIZE);
 	      break;
 	    case ATYP_DN:
-	      if(serversock->dnsize)
-	      {
-                strncpy(serversock->serveraddr, hostaddr, serversock->dnsize);
-	      } else
-	      {
-	        serversock->dnsize = strlen(hostaddr);
-                strncpy(serversock->serveraddr, hostaddr, serversock->dnsize);
-	      }
+	      serversock->dnsize = strlen(hostaddr);
+              memcpy(serversock->serveraddr, hostaddr, serversock->dnsize);
 	      break;
 	    case ATYP_IPV6:
               strncpy(serversock->serveraddr, hostaddr, ATYP_IPV6_SIZE);

@@ -453,6 +453,8 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   char * cims;
   int ret;
   int size = 1 + nmethods + /*strlen(method)*/ 1 + 1;
+  struct in_addr host_in_addr;
+  unsigned int hostaddr;
   cims = (char *)malloc(size * sizeof(char));
   /*snprintf(cims, size, "%x%x%s", 0x05, nmethods, method);*/
   snprintf(cims, size, "%c%c%c", SOCKS_VERS, method, method);
@@ -500,12 +502,24 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   memcpy(request, buffer, size);
   switch(addrtype) {
     case ATYP_IPV4:
+      if(!inet_aton(addr, &host_in_addr))
+      {
+        logit(stderr, "The IP Address you provided is not in the correct"
+	              " format, please provide the address as"
+		      " xxx.xxx.xxx.xxx\n");
+	usage();
+      }
+      hostaddr = host_in_addr.s_addr;
+      memcpy(&request[size], &hostaddr, ATYP_IPV4_SIZE);
+      addrlen = ATYP_IPV4_SIZE;
       break;
     case ATYP_DN:
       request[size++] = addrlen;
       memcpy(&request[size], addr, addrlen);
       break;
     case ATYP_IPV6:
+      logit(stderr, "IPv6 addresses are currently unimplemented. Sorry.\n");
+      exit(EXIT_FAILURE);
       break;
     default:
       logit(stderr, "BUG: The addrtype you provided is unrecognized and you"

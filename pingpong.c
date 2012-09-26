@@ -452,9 +452,9 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   int sfd = pp_connect(socksaddr, socksport);
   char * cims;
   int ret;
-  int size = 1 + nmethods + /*strlen(method)*/ 1 + 1;
   struct in_addr host_in_addr;
   unsigned int hostaddr;
+  int size = 1 + nmethods + sizeof(method);
   cims = (char *)malloc(size * sizeof(char));
   /*snprintf(cims, size, "%x%x%s", 0x05, nmethods, method);*/
   snprintf(cims, size, "%c%c%c", SOCKS_VERS, method, method);

@@ -454,6 +454,7 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   int ret;
   struct in_addr host_in_addr;
   unsigned int hostaddr;
+  uint16_t nsport;
   int size = 1 + nmethods + sizeof(method);
   cims = (char *)malloc(size * sizeof(char));
   /*snprintf(cims, size, "%x%x%s", 0x05, nmethods, method);*/
@@ -494,12 +495,18 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
                 " establishing connection\n");
 
   char * request;
-  int addrlen;
+  int addrlen, idx;
   addrlen = strlen(addr);
   char buffer[] = { SOCKS_VERS, SOCKS_CMD, SOCKS_RSV, addrtype };
+  size = sizeof(buffer) + addrlen + sizeof(nsport);
+  if(addrtype == ATYP_DN)
+  {
+    /* Request MUST prepend the length of the FQDN to the FQDN */
+    size += 1;
+  }
   request = (char *)malloc(size * sizeof(char));
+  idx = sizeof(buffer);
 
-  size = sizeof(buffer);
   memcpy(request, buffer, size);
   switch(addrtype) {
     case ATYP_IPV4:
@@ -511,12 +518,12 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
 	usage();
       }
       hostaddr = host_in_addr.s_addr;
-      memcpy(&request[size], &hostaddr, ATYP_IPV4_SIZE);
+      memcpy(&request[idx], &hostaddr, ATYP_IPV4_SIZE);
       addrlen = ATYP_IPV4_SIZE;
       break;
     case ATYP_DN:
-      request[size++] = addrlen;
-      memcpy(&request[size], addr, addrlen);
+      request[idx++] = addrlen;
+      memcpy(&request[idx], addr, addrlen);
       break;
     case ATYP_IPV6:
       logit(stderr, "IPv6 addresses are currently unimplemented. Sorry.\n");
@@ -529,10 +536,18 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
       usage();
       break;
   }
-  size += addrlen;
-  uint16_t nsport = htons(atoi(port));
-  memcpy(&request[size], &nsport, sizeof(nsport));
-  size += sizeof(nsport);
+  idx += addrlen;
+  nsport = htons(atoi(port));
+  memcpy(&request[idx], &nsport, sizeof(nsport));
+  idx += sizeof(nsport);
+  if(idx != size)
+  {
+    logit(stderr, "BUG: We failed to parse all the fields correctly!. We"
+                  " expected %d bytes but added %d bytes to the request.\n", 
+		  size, idx);
+    exit(EXIT_FAILURE);
+  }
+    
   ret = write(sfd, request, size);
   if(ret != size)
     write(sfd, request + ret, size - ret);

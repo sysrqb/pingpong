@@ -58,6 +58,8 @@ struct node_t {
 struct socks5_socket_t {
   char * bindaddr;
   char bindport[2];
+  int sfd;
+  int connected;
 };
 
 struct server_socket_t {
@@ -616,6 +618,7 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
     notempty |= reply[i];
   }
 
+  #if 0
   if(!notempty)
   {
     fprintf(stderr, "The connection to the SOCKS server was successfully"
@@ -623,21 +626,24 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
 		    " SOCKS server to the destination was not.\n");
     exit(EXIT_FAILURE);
   }
+  #endif
 
-  /*bindaddr = (char *)malloc(addr_size * sizeof(char));*/
-  memcpy(bindaddr, reply + addr_offset, size - addr_size - port_offset_from_rear);
-  bindport = reply[addr_offset + addr_size];
-  /*logit(stderr, "BUG: We seem to have parsed the reply incorrectly."
-                  " The reply was %s and we are at index %d\n", reply, i);*/
   struct socks5_socket_t * bindsock;
   bindsock = (struct socks5_socket_t *)malloc(sizeof(bindsock));
-  size = strlen(addr);
-  bindsock->bindaddr = (char *)malloc(size * sizeof(addr));
-  strncpy(bindsock->bindaddr, bindaddr, size);
-  bindsock->bindport[0] = bindport & 0xFF;
-  bindsock->bindport[1] = (bindport >> 8) & 0xFF;
-  logit(stdout, "SOCKS 5 server returned bind address %s:%s\n", bindsock->bindaddr, bindsock->bindport);
-  logit(stdout, "%s\n", reply);
+  if(notempty)
+  {
+    memcpy(bindaddr, reply + addr_offset, size - addr_size - port_offset_from_rear);
+    bindport = reply[addr_offset + addr_size];
+    size = strlen(addr);
+    bindsock->bindaddr = (char *)malloc(size * sizeof(addr));
+    strncpy(bindsock->bindaddr, bindaddr, size);
+    bindsock->bindport[0] = bindport & 0xFF;
+    bindsock->bindport[1] = (bindport >> 8) & 0xFF;
+    logit(stdout, "SOCKS 5 server returned bind address %s:%s\n", bindsock->bindaddr, bindsock->bindport);
+  }
+
+  bindsock->connected = 1;
+  bindsock->sfd = sfd;
   return bindsock;
 }
 
@@ -646,6 +652,7 @@ int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport
   char * hostaddr, * hostport;
   struct socks5_socket_t * socksssock;
   char buf[BUFSIZE + 1];
+  int sfd;
   buf[BUFSIZE] = '\0';
 
   hostaddr = serversock->serveraddr;
@@ -653,7 +660,14 @@ int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport
   socksssock = socks5_connect(socksaddr, socksport, hostaddr, hostport,
                              NUM_AUTH_METHOD_SUPPORTED, SUPPORTED_AUTH_METHODS,
 			     serversock->atyp);
-  int sfd = pp_connect(socksssock->bindaddr, socksssock->bindport);
+  if(socksssock->connected)
+  {
+    sfd = socksssock->sfd;
+  } else
+  {
+    sfd = pp_connect(socksssock->bindaddr, socksssock->bindport);
+  }
+  logit(stdout, "Commencing pong request\n");
   for(;;){
     write(sfd, "ping", 4);
     read(sfd, buf, 4);

@@ -40,10 +40,10 @@
 #define DATEFMT "%F %H:%M:%S"
 
 #define ATYP_IPV4 0x01
-#define ATYP_IPV4_SIZE INET_ADDRSTRLEN
+#define ATYP_IPV4_SIZE 4
 #define ATYP_DN 0x03
 #define ATYP_IPV6 0x04
-#define ATYP_IPV6_SIZE INET6_ADDRSTRLEN
+#define ATYP_IPV6_SIZE 128
 
 #define get_max(a,b) ((a) > (b) ? (a) : (b))
 
@@ -555,7 +555,7 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   free(request);
   
   char * reply;
-  size = 4 + addrlen + 2 + 1;
+  size = 4 + ATYP_IPV4_SIZE + 2;
   reply = (char *)malloc(size * sizeof(char));
   ret = read(sfd, reply, size);
   size = read(sfd, reply + ret, size - ret);
@@ -759,14 +759,16 @@ int main(int argc, char * argv[]) {
 	  socksssock->serverport = argv[6];
           switch(serversock->atyp) {
 	    case ATYP_IPV4:
-              strncpy(serversock->serveraddr, hostaddr, ATYP_IPV4_SIZE);
+	      serversock->dnsize = strlen(hostaddr);
+              strncpy(serversock->serveraddr, hostaddr, serversock->dnsize);
 	      break;
 	    case ATYP_DN:
 	      serversock->dnsize = strlen(hostaddr);
               memcpy(serversock->serveraddr, hostaddr, serversock->dnsize);
 	      break;
 	    case ATYP_IPV6:
-              strncpy(serversock->serveraddr, hostaddr, ATYP_IPV6_SIZE);
+	      serversock->dnsize = strlen(hostaddr);
+              strncpy(serversock->serveraddr, hostaddr, serversock->dnsize);
 	      break;
 	  }
 

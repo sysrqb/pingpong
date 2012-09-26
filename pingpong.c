@@ -466,6 +466,7 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   if(ret != 2)
   {
     logit(stderr, "The response from the SOCKS 5 was invalid. Failing.\n");
+    logit(stderr, "The response was %d bytes but we expected 2 bytes\n", ret);
     exit(EXIT_FAILURE);
   }
 

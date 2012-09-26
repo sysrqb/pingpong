@@ -605,7 +605,23 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
                     " This is currently unimplemented.\n");
     exit(EXIT_FAILURE);
   }
+
   int addr_offset = 4, addr_size = 4, port_offset_from_rear = 2;
+    
+  int notempty = 0;
+  for(i = addr_offset; i < ret; i++)
+  {
+    notempty |= reply[i];
+  }
+
+  if(!notempty)
+  {
+    fprintf(stderr, "The connection to the SOCKS server was successfully"
+                    " established, however the the connection from the"
+		    " SOCKS server to the destination was not.\n");
+    exit(EXIT_FAILURE);
+  }
+
   /*bindaddr = (char *)malloc(addr_size * sizeof(char));*/
   memcpy(bindaddr, reply + addr_offset, size - addr_size - port_offset_from_rear);
   bindport = reply[addr_offset + addr_size];

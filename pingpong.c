@@ -39,10 +39,13 @@
 #define BUFSIZE 4
 #define DATEFMT "%F %H:%M:%S"
 
+#define ATYP_IPV4 0x01
+#define ATYP_IPV4_SIZE INET_ADDRSTRLEN
+#define ATYP_DN 0x03
+#define ATYP_IPV6 0x04
+#define ATYP_IPV6_SIZE INET6_ADDRSTRLEN
+
 #define get_max(a,b) ((a) > (b) ? (a) : (b))
-
-int ping(char *, char *, char *, char *);
-
 
 struct node_t {
   int fd;
@@ -57,10 +60,27 @@ struct socks5_socket_t {
   char bindport[2];
 };
 
-char remote[INET6_ADDRSTRLEN];
+struct server_socket_t {
+  /* Remote server address */
+  char * serveraddr;
+  /* Server port number */
+  char * serverport;
+  /* Address Type */
+  char atyp;
+  /* Length of fqdn */
+  int dnsize;
+
+  /* serversock: client destination server */
+  /* socksssocks: SOCKS server socket info */
+} * serversock, * socksssock;
+
 int loglevel;
 char * logfile;
-char * portnumber;
+
+
+int ping(struct server_socket_t *, char *, char *);
+void usage();
+
 
 inline void logit(FILE * fd, char * str, ...) {
   FILE * file;
@@ -140,7 +160,7 @@ void * get_in_addr(struct sockaddr * sa){
 void sig_handle_pipe(int sig) {
   if(sig == SIGPIPE) {
     logit(stdout, "We've lost connection with the peer!\n");
-    ping(remote, PORT, "192.168.2.6", "9100");
+    ping(serversock, socksssock->serveraddr, socksssock->serverport);
   }
 
 }
@@ -377,9 +397,6 @@ int pp_connect(char * hostaddr, char * port) {
   else
     address = "127.0.0.1";
 
-  int size = strlen(address);
-  strncpy(remote, hostaddr, size);
-
   memset(&addr, 0, sizeof addr);
 
   hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -416,7 +433,7 @@ int pp_connect(char * hostaddr, char * port) {
   
 struct socks5_socket_t *
 socks5_connect(char * socksaddr, char * socksport, char * addr,
-               char * port, int nmethods, char method) {
+               char * port, int nmethods, char method, char addrtype) {
   int sfd = pp_connect(socksaddr, socksport);
   char * cims;
   int ret;
@@ -458,12 +475,27 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   char * request;
   int addrlen;
   addrlen = strlen(addr);
-  char buffer[] = { 0x05, 0x01, 0x00, 0x05, addrlen };
+  char buffer[] = { 0x05, 0x01, 0x00, addrtype };
   request = (char *)malloc(size * sizeof(char));
 
   size = sizeof(buffer);
   memcpy(request, buffer, size);
-  memcpy(&request[size], addr, addrlen);
+  switch(addrtype) {
+    case 0x01:
+      break;
+    case 0x03:
+      request[size++] = addrlen;
+      memcpy(&request[size], addr, addrlen);
+      break;
+    case 0x04:
+      break;
+    default:
+      logit(stderr, "BUG: The addrtype you provided is unrecognized and you"
+                    " shouldn't have been able to get this far if this was"
+		    " the case.");
+      usage();
+      break;
+  }
   size += addrlen;
   uint16_t nsport = htons(atoi(port));
   memcpy(&request[size], &nsport, sizeof(nsport));
@@ -543,12 +575,22 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   return bindsock;
 }
 
-int ping(char * hostaddr, char * port, char * socksaddr, char * socksport){
-  struct socks5_socket_t * sockssock;
+#define NUM_AUTH_METHOD_SUPPORTED 1
+#define SUPPORTED_AUTH_METHODS 0x00
+
+int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport) {
+
+  char * hostaddr, * hostport;
+  struct socks5_socket_t * socksssock;
   char buf[BUFSIZE + 1];
   buf[BUFSIZE] = '\0';
-  sockssock = socks5_connect(socksaddr, socksport, hostaddr, port, 1, 0x00);
-  int sfd = pp_connect(sockssock->bindaddr, sockssock->bindport);
+
+  hostaddr = serversock->serveraddr;
+  hostport = serversock->serverport;
+  socksssock = socks5_connect(socksaddr, socksport, hostaddr, hostport,
+                             NUM_AUTH_METHOD_SUPPORTED, SUPPORTED_AUTH_METHODS,
+			     serversock->atyp);
+  int sfd = pp_connect(socksssock->bindaddr, socksssock->bindport);
   for(;;){
     write(sfd, "ping", 4);
     read(sfd, buf, 4);
@@ -566,7 +608,7 @@ inline void usage() {
   printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
 
   printf("Syntax: pingpong -s [-p serverport] |\n");
-  printf("                 -c destinationaddress destinationport"
+  printf("                 -c atyp destinationaddress destinationport"
                           " SOCKSaddress SOCKSport\n\n");
   printf("Type: \n");
   printf("  -s: Run as server\n");
@@ -576,7 +618,13 @@ inline void usage() {
          " Name | IPv6 Addr\n\n");
   printf("destination port:\n  Port number that server is listening on\n\n");
   printf("SOCKS address:\n  IPv4 or IPv6 Address of SOCKS 5 server\n\n");
-  printf("SOCKS port:\n  Port number that SOCKS 5 server is listening on\n\n\n");
+  printf("SOCKS port:\n  Port number that SOCKS 5 server is listening on\n\n");
+  printf("atyp:\n  Address type\n\n\n");
+
+  printf("Address Type:\n");
+  printf("  -4: IPv4 Address (i.e. 192.168.1.1)\n");
+  printf("  -d: Fully-Qualified Domain Name (i.e. example.com)\n");
+  printf("  -6: IPv6 Address (i.e. 2001:0db8::ff00:0042:8329)\n\n");
 
   printf("Options:\n");
   printf("  -p  server port number\n");
@@ -585,10 +633,10 @@ inline void usage() {
 
 #define TYPE_OPTION_SIZE 2
 #define PORT_SIZE 5
+#define CLIENT_MAX_ARGC 7
 
 int main(int argc, char * argv[]) {
-  char * type, * hostaddr, * hostport, * socksaddr, * socksport;
-  char * port;
+  char * type, * port, * hostaddr;
   int portsize;
   loglevel =  0;
   if(argc > 1)
@@ -596,6 +644,7 @@ int main(int argc, char * argv[]) {
     type = argv[1];
     if(!strncmp(type, "-s", TYPE_OPTION_SIZE))
     {
+      serversock = (struct server_socket_t *)malloc(sizeof(serversock));
       if(argc > 2)
       {
         if(!strncmp(argv[2], "-p", TYPE_OPTION_SIZE) && argc > 3)
@@ -610,30 +659,80 @@ int main(int argc, char * argv[]) {
         port = PORT;
       }
       portsize = strlen(port);
-      portnumber = (char *)malloc(portsize * sizeof(char));
-      strncpy(portnumber, port, portsize);
+      serversock->serverport = (char *)malloc(portsize * sizeof(char));
+      strncpy(serversock->serverport, port, portsize);
 
       logit(stdout, "Starting pong server on port %s\n", port);
-      pong(port);
-    } else if(argc < 7)
+      pong(serversock->serverport);
+    } else if(argc < (CLIENT_MAX_ARGC + 1))
     {
       if(!strncmp(type, "-c", TYPE_OPTION_SIZE))
       {
-        if(argc == 6)
+        serversock = (struct server_socket_t *)malloc(sizeof(serversock));
+        socksssock = (struct server_socket_t *)malloc(sizeof(socksssock));
+        
+	if(argc > 2)
 	{
-          hostaddr = argv[2];
-	  hostport = argv[3];
-	  socksaddr = argv[4];
-	  socksport = argv[5];
+          if(!strncmp(argv[2], "-4", TYPE_OPTION_SIZE))
+          {
+	    serversock->atyp = ATYP_IPV4;
+	    serversock->serveraddr = (char *)malloc(INET_ADDRSTRLEN * sizeof(char));
+	  } else if (!strncmp(argv[2], "-d", TYPE_OPTION_SIZE))
+          {
+	    serversock->atyp = ATYP_DN;
+	    serversock->serveraddr = (char *)malloc(strlen(argv[3]) * sizeof(char));
+	  } else if (!strncmp(argv[2], "-6", TYPE_OPTION_SIZE))
+	  {
+	    serversock->atyp = ATYP_IPV6;
+	    serversock->serveraddr = (char *)malloc(INET6_ADDRSTRLEN * sizeof(char));
+	  } else
+          {
+	    usage();
+          }
+	}
+        if(argc == CLIENT_MAX_ARGC)
+	{
+          hostaddr = argv[3];
+	  serversock->serverport = argv[4];
+	  socksssock->serveraddr = argv[5];
+	  socksssock->serverport = argv[6];
+          switch(serversock->atyp) {
+	    case ATYP_IPV4:
+              strncpy(serversock->serveraddr, hostaddr, ATYP_IPV4_SIZE);
+	      break;
+	    case ATYP_DN:
+	      if(serversock->dnsize)
+	      {
+                strncpy(serversock->serveraddr, hostaddr, serversock->dnsize);
+	      } else
+	      {
+	        serversock->dnsize = strlen(hostaddr);
+                strncpy(serversock->serveraddr, hostaddr, serversock->dnsize);
+	      }
+	      break;
+	    case ATYP_IPV6:
+              strncpy(serversock->serveraddr, hostaddr, ATYP_IPV6_SIZE);
+	      break;
+	  }
+
           logit(stdout, "Starting ping client to %s:%s via %s:%s\n",
-	        hostaddr, hostport, socksaddr, socksport);
-	  ping(hostaddr, hostport, socksaddr, socksport);
+	        serversock->serveraddr, serversock->serverport,
+		socksssock->serveraddr, socksssock->serverport);
+	  ping(serversock, socksssock->serveraddr, socksssock->serverport);
 	} else
 	{
           /* Fallback value; let's keep everything local for now */
+	  serversock->atyp = ATYP_IPV4;
+	  serversock->serveraddr = "127.0.0.1";
+	  serversock->serverport = "7464";
+	  socksssock->serveraddr = "127.0.0.1";
+	  socksssock->serverport = "9100";
+
           logit(stdout, "Starting ping client with a local connection to"
-	                " 127.0.0.1:7464 via 127.0.0.1:9100\n");
-	  ping("127.0.0.1", "7464", "127.0.0.1", "9100");
+	                " %s:%s via %s:%s\n",
+			serversock->serveraddr, serversock->serverport,
+			socksssock->serveraddr, socksssock->serverport);
+	  ping(serversock, socksssock->serveraddr, socksssock->serverport);
 	}
       }
     } else

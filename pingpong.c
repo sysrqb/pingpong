@@ -581,12 +581,12 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
       exit(EXIT_FAILURE);
   }
   atyp = reply[3];
-  if(atyp == 0x02) {
+  if(atyp == ATYP_DN) {
     fprintf(stderr, "The server selected domain name as the address type."
                     " This is currently unimplemented\n");
     exit(EXIT_FAILURE);
-  } else if(atyp == 0x03) {
-    fprintf(stderr, "The server selected domain name as the address type."
+  } else if(atyp == ATYP_IPV6) {
+    fprintf(stderr, "The server selected an IPv6 address as the address type."
                     " This is currently unimplemented.\n");
     exit(EXIT_FAILURE);
   }

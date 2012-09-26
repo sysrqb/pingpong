@@ -457,7 +457,7 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   int size = 1 + nmethods + sizeof(method);
   cims = (char *)malloc(size * sizeof(char));
   /*snprintf(cims, size, "%x%x%s", 0x05, nmethods, method);*/
-  snprintf(cims, size, "%c%c%c", SOCKS_VERS, method, method);
+  snprintf(cims, size, "%c%c%c", SOCKS_VERS, nmethods, method);
   ret = write(sfd, cims, size);
   if(ret != size)
     write(sfd, cims + ret, size - ret);

@@ -189,7 +189,7 @@ int socket_bind_list(char * port) {
   int retval, i = 0, yes = 1;
   memset(&hints, 0, sizeof hints);
 
-  hints.ai_family = AF_UNSPEC;
+  hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
   pservinfo = &servinfo;

@@ -551,14 +551,16 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   ret = write(sfd, request, size);
   if(ret != size)
     write(sfd, request + ret, size - ret);
-  ret = write(sfd, request, size);
   free(request);
   
   char * reply;
   size = 4 + ATYP_IPV4_SIZE + 2;
   reply = (char *)malloc(size * sizeof(char));
   ret = read(sfd, reply, size);
-  size = read(sfd, reply + ret, size - ret);
+  if(ret < size)
+  {
+    ret = read(sfd, reply + ret, size - ret);
+  }
   int atyp;
   char bindaddr[4];
   uint16_t bindport;

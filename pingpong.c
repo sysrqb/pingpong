@@ -430,6 +430,21 @@ int pp_connect(char * hostaddr, char * port) {
   freeaddrinfo(result);           /* No longer needed */
   return sfd;
 }
+
+/* SOCKS version we support */
+#define SOCKS_VERS 0x05
+
+/* SOCKS command we support: connect */
+#define SOCKS_CMD 0x01
+
+/* Number of supported authentication methods */
+#define NUM_AUTH_METHOD_SUPPORTED 1
+
+/* Supported Method(s): No Auth */
+#define SUPPORTED_AUTH_METHODS 0x00
+
+/* SOCKS reserved field */
+#define SOCKS_RSV 0x00
   
 struct socks5_socket_t *
 socks5_connect(char * socksaddr, char * socksport, char * addr,
@@ -440,23 +455,26 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   int size = 1 + nmethods + /*strlen(method)*/ 1 + 1;
   cims = (char *)malloc(size * sizeof(char));
   /*snprintf(cims, size, "%x%x%s", 0x05, nmethods, method);*/
-  snprintf(cims, size, "%c%c%c", 0x05, 0x01, 0x00);
-  printf("%s %d\n", cims, size);
+  snprintf(cims, size, "%c%c%c", SOCKS_VERS, method, method);
   ret = write(sfd, cims, size);
   if(ret != size)
     write(sfd, cims + ret, size - ret);
   ret = read(sfd, cims, size);
   cims[ret + 1] = '\0';
   if(ret != 2)
+  {
     logit(stderr, "The response from the SOCKS 5 was invalid. Failing.\n");
+    exit(EXIT_FAILURE);
+  }
 
   int i = 0, ver = 0, meth = 0;
   ver = cims[0];
   meth = cims[1];
   if(ver != 5){
     logit(stderr, "The SOCKS 5 server does not support SOCKS 5, we can"
-                  " not continue. Version %d returned.\nRequest sent: \n", ver);
-    exit(0);
+                  " not continue. Version %d returned.\nRequest sent: %d\n",
+		  ver, SOCKS_VERS);
+    exit(EXIT_FAILURE);
   }
   for(i = 0; i < nmethods; i++) {
     if(method == meth)
@@ -466,7 +484,7 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
     logit(stderr, "The SOCKS 5 server does not support the chosen"
                   " authentication method, we can not continue."
 		  " Returned %x instead of %s\n", meth, method);
-    exit(0);
+    exit(EXIT_FAILURE);
   }
   free(cims);
   logit(stdout, "Server supports SOCKS 5 without authentication,"
@@ -475,19 +493,19 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   char * request;
   int addrlen;
   addrlen = strlen(addr);
-  char buffer[] = { 0x05, 0x01, 0x00, addrtype };
+  char buffer[] = { SOCKS_VERS, SOCKS_CMD, SOCKS_RSV, addrtype };
   request = (char *)malloc(size * sizeof(char));
 
   size = sizeof(buffer);
   memcpy(request, buffer, size);
   switch(addrtype) {
-    case 0x01:
+    case ATYP_IPV4:
       break;
-    case 0x03:
+    case ATYP_DN:
       request[size++] = addrlen;
       memcpy(&request[size], addr, addrlen);
       break;
-    case 0x04:
+    case ATYP_IPV6:
       break;
     default:
       logit(stderr, "BUG: The addrtype you provided is unrecognized and you"
@@ -574,9 +592,6 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   logit(stdout, "%s\n", reply);
   return bindsock;
 }
-
-#define NUM_AUTH_METHOD_SUPPORTED 1
-#define SUPPORTED_AUTH_METHODS 0x00
 
 int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport) {
 

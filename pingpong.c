@@ -95,6 +95,7 @@ inline void logit(FILE * fd, char * str, ...) {
   FILE * file;
   char * s, * ss;
   int size = 40, ret;
+  int remaining, written;
 
   time_t now;
   now = time(NULL);
@@ -130,9 +131,21 @@ inline void logit(FILE * fd, char * str, ...) {
         ss = s;
 
       file = fopen(logfile, "w+");
-      fwrite(ss, sizeof(char), ret, file);
-      if(fd == stderr)
-        fwrite("ERROR: ", 8, sizeof(char), file);
+      written = fwrite(ss, sizeof(char), ret, file);
+      remaining = ret - written;
+      while(remaining) {
+        written = fwrite(ss + (ret - remaining), sizeof(char), remaining, file);
+        remaining = ret - written;
+      }
+      if(fd == stderr) {
+        ret = fwrite("ERROR: ", 8, sizeof(char), file);
+        remaining = ret - written;
+        while(remaining) {
+	  /* Incorrectly writes prefix to file, but this isn't fatal */
+          written = fwrite(ss + (ret - remaining), sizeof(char), remaining, file);
+          remaining = ret - written;
+        }
+      }
       free(s);
       s = (char *)malloc(size * sizeof(char));
       ret = vsnprintf(s, size, str, va);
@@ -150,7 +163,12 @@ inline void logit(FILE * fd, char * str, ...) {
 	  s = ss;
       } else
         ss = s;
-      fwrite(ss, ret, sizeof(char), file);
+      ret = fwrite(ss, ret, sizeof(char), file);
+      remaining = ret - written;
+      while(remaining) {
+        written = fwrite(ss + (ret - remaining), sizeof(char), remaining, file);
+        remaining = ret - written;
+      }
       fclose(file);
       break;
     default:
@@ -306,6 +324,7 @@ int socket_bind_list(char * port) {
 int pong(char * port){
   int fdsock;
   int retval;
+  int remaining;
 
   int acceptedfd = 0;
   struct sockaddr_storage client_addr;
@@ -385,8 +404,15 @@ int pong(char * port){
 	      } else {
 	        node->buf_used += retval;
                 logit(stdout, "Read in %d bytes, %s\n", retval, node->buf);
-	        if(!strncmp(node->buf, "ping", 4))
-		  write(node->fd, "pong", 4);
+	        if(!strncmp(node->buf, "ping", 4)) {
+		  retval = write(node->fd, "pong", 4);
+		  remaining = 4 - retval;
+		  while(remaining) {
+		    /* This sends a malformed payload, but that's ok for now */
+		    retval = write(node->fd, "pong", remaining);
+		    remaining = remaining - retval;
+		  }
+		}
 		if(node->buf_used == BUFSIZE)
 		  node->buf_used = 0;
 	      }
@@ -418,8 +444,15 @@ int pong(char * port){
 	      if(retval == 0)
 	        remove_and_close(cur);
               else {
-	        if(!strncmp(cur->buf, "ping", 4))
-		  write(cur->fd, "pong", 4);
+	        if(!strncmp(cur->buf, "ping", 4)) {
+		  retval = write(cur->fd, "pong", 4);
+		  remaining = 4 - retval;
+		  while(remaining) {
+		    /* This sends a malformed payload, but that's ok for now */
+		    retval = write(node->fd, "pong", remaining);
+		    remaining = remaining - retval;
+		  }
+		}
               if(node->buf_used == BUFSIZE)
 	        node->buf_used = 0;
               }
@@ -506,13 +539,16 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   struct in_addr host_in_addr;
   unsigned int hostaddr;
   uint16_t nsport;
-  int size = 1 + nmethods + sizeof(method);
+  int size = 1 + nmethods + sizeof(method), remaining;
   cims = (char *)malloc(size * sizeof(char));
   /*snprintf(cims, size, "%x%x%s", 0x05, nmethods, method);*/
   snprintf(cims, size, "%c%c%c", SOCKS_VERS, nmethods, method);
   ret = write(sfd, cims, size);
-  if(ret != size)
-    write(sfd, cims + ret, size - ret);
+  remaining = size - ret;
+  while(remaining) {
+    ret = write(sfd, cims + (size - remaining), remaining);
+    remaining = remaining - ret;
+  }
   ret = read(sfd, cims, size);
   cims[ret + 1] = '\0';
   if(ret != 2)
@@ -600,8 +636,11 @@ socks5_connect(char * socksaddr, char * socksport, char * addr,
   }
     
   ret = write(sfd, request, size);
-  if(ret != size)
-    write(sfd, request + ret, size - ret);
+  remaining = size - ret;
+  while(remaining) {
+    ret = write(sfd, request + (size - remaining), remaining);
+    remaining = remaining - ret;
+  }
   free(request);
   
   char * reply;
@@ -701,7 +740,7 @@ int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport
   char * hostaddr, * hostport;
   struct socks5_socket_t * socksssock;
   char buf[BUFSIZE + 1];
-  int sfd;
+  int sfd, res, remaining;
   buf[BUFSIZE] = '\0';
 
   hostaddr = serversock->serveraddr;
@@ -718,8 +757,18 @@ int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport
   }
   logit(stdout, "Commencing pong request\n");
   for(;;){
-    write(sfd, "ping", 4);
-    read(sfd, buf, 4);
+    res = write(sfd, "ping", 4);
+    remaining = 4 - res;
+    while(remaining) {
+      res = write(sfd, "ping", remaining);
+      remaining = remaining - res;
+    } 
+    res = read(sfd, buf, 4);
+    remaining = 4 - res;
+    while(remaining) {
+      res = read(sfd, buf, remaining);
+      remaining = remaining - res;
+    }
     logit(stdout, "Received: %s\n", buf);
     sleep(5);
   }

@@ -728,6 +728,7 @@ int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport
 
 inline void usage() {
   printf(
+PACKAGE_STRING"\n\n"
 "License GPLv3+: GNU GPL version 3 or later"
   " <http://gnu.org/licenses/gpl.html>\n"
 "This is free software: you are free to change"
@@ -735,7 +736,7 @@ inline void usage() {
 "There is NO WARRANTY, to the extent permitted by law.\n\n"
 
 
-"Syntax: pingpong -s [-p serverport] |\n"
+"Syntax: "PACKAGE" -s [-p serverport] |\n"
 "                 -c atyp destinationaddress destinationport"
   " SOCKSaddress SOCKSport [-d solution]\n\n"
 
@@ -767,7 +768,10 @@ inline void usage() {
 
 "Solution:\n"
 "  -d a shell script or executable that will be run if the server becomes"
-  " unreachable from the client for a certain amount of time.\n\n");
+  " unreachable from the client for a certain amount of time.\n\n"
+
+"Report bugs to <"PACKAGE_BUGREPORT">\n\n"
+);
   exit(0);
 }
 

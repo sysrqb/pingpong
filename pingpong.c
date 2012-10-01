@@ -678,33 +678,47 @@ int ping(struct server_socket_t * serversock, char * socksaddr, char * socksport
 }
 
 inline void usage() {
-  printf("License GPLv3+: GNU GPL version 3 or later"
-         " <http://gnu.org/licenses/gpl.html>\n");
-  printf("This is free software: you are free to change"
-         " and redistribute it.\n");
-  printf("There is NO WARRANTY, to the extent permitted by law.\n\n");
+  printf(
+"License GPLv3+: GNU GPL version 3 or later"
+  " <http://gnu.org/licenses/gpl.html>\n"
+"This is free software: you are free to change"
+  " and redistribute it.\n"
+"There is NO WARRANTY, to the extent permitted by law.\n\n"
 
-  printf("Syntax: pingpong -s [-p serverport] |\n");
-  printf("                 -c atyp destinationaddress destinationport"
-                          " SOCKSaddress SOCKSport\n\n");
-  printf("Type: \n");
-  printf("  -s: Run as server\n");
-  printf("  -c: Run as client\n\n");
 
-  printf("destination address:\n  IPv4 Addr | Fully-Qualified Domain"
-         " Name | IPv6 Addr\n\n");
-  printf("destination port:\n  Port number that server is listening on\n\n");
-  printf("SOCKS address:\n  IPv4 or IPv6 Address of SOCKS 5 server\n\n");
-  printf("SOCKS port:\n  Port number that SOCKS 5 server is listening on\n\n");
-  printf("atyp:\n  Address type\n\n\n");
+"Syntax: pingpong -s [-p serverport] |\n"
+"                 -c atyp destinationaddress destinationport"
+  " SOCKSaddress SOCKSport [-d solution]\n\n"
 
-  printf("Address Type:\n");
-  printf("  -4: IPv4 Address (i.e. 192.168.1.1)\n");
-  printf("  -d: Fully-Qualified Domain Name (i.e. example.com)\n");
-  printf("  -6: IPv6 Address (i.e. 2001:0db8::ff00:0042:8329)\n\n");
 
-  printf("Options:\n");
-  printf("  -p  server port number\n");
+"Type: \n"
+"  -s: Run as server\n"
+"  -c: Run as client\n\n"
+
+
+"destination address:\n  IPv4 Addr | Fully-Qualified Domain"
+  " Name | IPv6 Addr\n\n"
+
+"destination port:\n  Port number that server is listening on\n\n"
+
+"SOCKS address:\n  IPv4 or IPv6 Address of SOCKS 5 server\n\n"
+
+"SOCKS port:\n  Port number that SOCKS 5 server is listening on\n\n"
+"atyp:\n  Address type\n\n\n"
+
+
+
+"Address Type:\n"
+"  -4: IPv4 Address (i.e. 192.168.1.1)\n"
+"  -d: Fully-Qualified Domain Name (i.e. example.com)\n"
+"  -6: IPv6 Address (i.e. 2001:0db8::ff00:0042:8329)\n\n"
+
+"Options:\n"
+"  -p  server port number\n\n"
+
+"Solution:\n"
+"  -d a shell script or executable that will be run if the server becomes"
+  " unreachable from the client for a certain amount of time.\n\n");
   exit(0);
 }
 

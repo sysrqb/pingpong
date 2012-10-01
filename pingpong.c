@@ -785,12 +785,13 @@ PACKAGE_STRING"\n\n"
 "There is NO WARRANTY, to the extent permitted by law.\n\n"
 
 
-"Syntax: "PACKAGE" -s [-p serverport] |\n"
+"Syntax: "PACKAGE" [-h] -s [-p serverport] |\n"
 "                 -c atyp destinationaddress destinationport"
   " SOCKSaddress SOCKSport [-d solution]\n\n"
 
 
 "Type: \n"
+"  -h: This help menu\n"
 "  -s: Run as server\n"
 "  -c: Run as client\n\n"
 
@@ -837,6 +838,10 @@ int main(int argc, char * argv[]) {
   if(argc > 1)
   {
     type = argv[1];
+    if(!strncmp(type, "-h", TYPE_OPTION_SIZE))
+    {
+      usage();
+    }
     if(!strncmp(type, "-s", TYPE_OPTION_SIZE))
     {
       serversock = (struct server_socket_t *)malloc(sizeof(serversock));

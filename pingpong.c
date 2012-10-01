@@ -895,7 +895,7 @@ int main(int argc, char * argv[]) {
           if(!strncmp(argv[7], "-s", SOLUTION_OPTION_SIZE))
 	  solution = argv[8];
 	}
-        if(argc == CLIENT_MAX_ARGC - SOLUTION_ARGC)
+        if(argc >= CLIENT_MAX_ARGC - SOLUTION_ARGC)
 	{
 
           hostaddr = argv[3];

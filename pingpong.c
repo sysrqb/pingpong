@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <stdarg.h>
+#include "config.h"
 
 #define PORT "7464"
 #define BACKLOG 7

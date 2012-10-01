@@ -76,6 +76,12 @@ struct server_socket_t {
   /* socksssocks: SOCKS server socket info */
 } * serversock, * socksssock;
 
+struct time_check_t {
+  time_t last;
+  short count;
+} * tc;
+
+char * solution;
 int loglevel;
 char * logfile;
 
@@ -159,9 +165,51 @@ void * get_in_addr(struct sockaddr * sa){
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+#define MAX_DISCONNECT_TIME 5*60
+#define MAX_DISCONNECT_COUNT 3
+
 void sig_handle_pipe(int sig) {
   if(sig == SIGPIPE) {
     logit(stdout, "We've lost connection with the peer!\n");
+    if(tc == NULL)
+    {
+      tc = (struct time_check_t *)malloc(sizeof(tc));
+      tc->last = time(NULL);
+      tc->count = 1;
+    } else
+    {
+      time_t now = time(NULL);
+      if(((now - tc->last) > MAX_DISCONNECT_TIME) &&
+         tc->count > MAX_DISCONNECT_COUNT)
+      {
+        if(solution != NULL)
+	{
+	  int pid;
+	  if((pid = fork()))
+	  {
+	    execlp(solution, solution, (char *)NULL);
+	    exit(EXIT_FAILURE);
+	  } else
+	  {
+	    int status, retval;
+	    retval = waitpid(pid, &status, 0);
+	    if(retval != pid)
+	    {
+	      logit(stderr, "We failed to run your solution! Please make sure"
+	                    " you provided a valid path and, if you are using"
+			    " a shell script, it begins with a #! line.\n");
+            }
+	  }
+	}
+	tc->last = 0;
+	tc->count = 0;
+      } else
+      {
+        tc->last = now;
+        ++tc->count;
+      }
+    }
+
     ping(serversock, socksssock->serveraddr, socksssock->serverport);
   }
 
@@ -724,7 +772,9 @@ inline void usage() {
 
 #define TYPE_OPTION_SIZE 2
 #define PORT_SIZE 5
-#define CLIENT_MAX_ARGC 7
+#define CLIENT_MAX_ARGC 9
+#define SOLUTION_OPTION_SIZE 2
+#define SOLUTION_ARGC 2
 
 int main(int argc, char * argv[]) {
   char * type, * port, * hostaddr;
@@ -783,6 +833,12 @@ int main(int argc, char * argv[]) {
 	}
         if(argc == CLIENT_MAX_ARGC)
 	{
+          if(!strncmp(argv[7], "-s", SOLUTION_OPTION_SIZE))
+	  solution = argv[8];
+	}
+        if(argc == CLIENT_MAX_ARGC - SOLUTION_ARGC)
+	{
+
           hostaddr = argv[3];
 	  serversock->serverport = argv[4];
 	  socksssock->serveraddr = argv[5];

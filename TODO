@@ -1,0 +1,14 @@
+In no particular order:
+
+- ncurses output with current stats
+- HTTP status interface and administrative control (which may be a hidden
+  service itself)
+  - Either third-party lib or custom-written linkable lib
+- autoconf setup
+- Configuration file
+- Add an authorization mechanism, mostlikely using the symmetric descriptor
+  cookie mentioned in the Rendezvous spec section 2.1, but this methods is
+  not set in stone.
+- Write unit tests?
+- Add easy-use implementation for sending X form of communication if peer
+  is no longer reachable (where X may be email or similar)
